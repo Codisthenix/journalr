@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 chrono = { version = "0.4.38", features = ["serde"] }
-clap = { version = "4.5.7", features = ["cargo", "derive", "env", "string"] }
+clap = { version = "4.5.7", features = ["derive"] }
 cocoon = { version = "0.4.2", features = ["thiserror"] }
 crossterm = "0.27.0"
 ratatui = { version = "0.26.2"}
