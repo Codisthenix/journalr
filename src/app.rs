@@ -156,7 +156,7 @@ impl<'a> App<'a> {
                     } else if KeyEvent::new(KeyCode::Char('d'), KeyModifiers::ALT) == k {
                         self.mode = AppMode::SetDate;
                         break;
-                    } else if KeyEvent::new(KeyCode::Delete, KeyModifiers::CONTROL) == k {
+                    } else if KeyEvent::new(KeyCode::Char('r'), KeyModifiers::CONTROL) == k {
                         self.mode = AppMode::Delete;
                         break;
                     } else if self.entries.get_mut(&self.date).unwrap().input(k) {
@@ -402,6 +402,7 @@ impl<'a> App<'a> {
     pub fn run(mut self) -> Result<(), Box<dyn std::error::Error>> {
         enable_raw_mode()?;
         stderr().execute(EnterAlternateScreen)?;
+        self.entries.entry(self.date).or_insert(Self::input_area(self.date, None));
         loop {
             match self.mode {
                 AppMode::Edit => self.edit_view()?,

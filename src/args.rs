@@ -11,15 +11,19 @@ pub struct Arguments {
     file: Option<String>,
     #[arg(short, long, requires("file"))]
     password: Option<String>,
+    #[arg(short,long)]
+    date: Option<Date>
 }
 impl TryFrom<Arguments> for App<'_> {
     type Error = DiaryError;
     fn try_from(value: Arguments) -> Result<Self, Self::Error> {
         let mut app = App::new()?;
+        value.date.map(|d| app.date = d);
         match value {
             Arguments {
                 file: Some(file),
                 password: None,
+                ..
             } => match Diary::read_jrnl(&file, "") {
                 Ok(entries) => {
                     app.path = file;
@@ -42,6 +46,7 @@ impl TryFrom<Arguments> for App<'_> {
             Arguments {
                 file: Some(file),
                 password: Some(password),
+                ..
             } => {
                 app.password = password;
                 app.path = file;
