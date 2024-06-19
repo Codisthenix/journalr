@@ -86,9 +86,7 @@ impl<'a> App<'a> {
         })
     }
     pub fn save(&mut self) {
-        if Diary::from(&self.entries).write_to(&self.path, &self.password).is_ok() {
-            self.saved = true;
-        }
+        self.saved =  Diary::from(&self.entries).write_to(&self.path, &self.password).is_ok() 
     }
 
     fn create_file(&mut self, path: &str) -> io::Result<bool> {
