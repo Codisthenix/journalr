@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::{
     app::{App, AppMode},
-    diary::{Diary, DiaryError},
+    diary::{Diary, DiaryFromFileError},
     ui::Date,
 };
 #[derive(Debug, clap::Parser)]
@@ -11,11 +11,11 @@ pub struct Arguments {
     file: Option<String>,
     #[arg(short, long, requires("file"))]
     password: Option<String>,
-    #[arg(short,long,value_name("DATE: DD-MM-YYYY"))]
-    date: Option<Date>
+    #[arg(short, long, value_name("DATE: DD-MM-YYYY"))]
+    date: Option<Date>,
 }
 impl TryFrom<Arguments> for App<'_> {
-    type Error = DiaryError;
+    type Error = DiaryFromFileError;
     fn try_from(value: Arguments) -> Result<Self, Self::Error> {
         let mut app = App::new()?;
         if let Some(d) = value.date {
@@ -39,7 +39,7 @@ impl TryFrom<Arguments> for App<'_> {
                         .iter_mut()
                         .for_each(|(date, input)| App::setup_input_area(input, *date));
                 }
-                Err(DiaryError::WrongPassword) => {
+                Err(DiaryFromFileError::WrongPassword) => {
                     app.path = file;
                     app.mode = AppMode::Password;
                 }

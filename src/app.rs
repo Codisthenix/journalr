@@ -22,7 +22,7 @@ use tui_textarea::TextArea;
 use crate::{
     clear,
     date::Date,
-    diary::{Diary, DiaryError},
+    diary::{Diary, DiaryFromFileError},
     ui::{
         centered_input_box, create_file,
         date_selection::{get_date_ui, DateSelection},
@@ -86,10 +86,9 @@ impl<'a> App<'a> {
         })
     }
     pub fn save(&mut self) {
-        if let Ok(_) = Diary::from(&self.entries)
-                .write_to(&self.path, &self.password){
-                self.saved = true;
-            }
+        if Diary::from(&self.entries).write_to(&self.path, &self.password).is_ok() {
+            self.saved = true;
+        }
     }
 
     fn create_file(&mut self, path: &str) -> io::Result<bool> {
@@ -146,21 +145,43 @@ impl<'a> App<'a> {
                 editor_ui(buf, &self.entries[&self.date], &self.entries, &self.date)
             })?;
             if event::poll(std::time::Duration::from_millis(16))? {
-                if let Ok(Event::Key(k)) = read() {
-                    if KeyEvent::new(KeyCode::Esc, KeyModifiers::NONE) == k {
-                        self.mode = AppMode::AskToSave;
-                        break;
-                    } else if KeyEvent::new(KeyCode::Char('s'), KeyModifiers::CONTROL) == k {
-                        self.save();
-                    } else if KeyEvent::new(KeyCode::Char('d'), KeyModifiers::ALT) == k {
-                        self.mode = AppMode::SetDate;
-                        break;
-                    } else if KeyEvent::new(KeyCode::Char('r'), KeyModifiers::CONTROL) == k {
-                        self.mode = AppMode::Delete;
-                        break;
-                    } else if self.entries.get_mut(&self.date).unwrap().input(k) {
-                        self.saved = false;
+                match read() {
+                    Ok(Event::Key(key)) if key.kind != KeyEventKind::Release => match key {
+                        KeyEvent {
+                            code: KeyCode::Char('s'),
+                            modifiers: KeyModifiers::CONTROL,
+                            ..
+                        } => {
+                            self.save();
+                        }
+                        KeyEvent {
+                            code: KeyCode::Char('d'),
+                            modifiers: KeyModifiers::ALT,
+                            ..
+                        } => {
+                            self.mode = AppMode::SetDate;
+                            break;
+                        }
+                        KeyEvent {
+                            code: KeyCode::Char('r'),
+                            modifiers: KeyModifiers::CONTROL,
+                            ..
+                        } => {
+                            self.mode = AppMode::Delete;
+                            break;
+                        }
+                        KeyEvent {
+                            code: KeyCode::Esc, ..
+                        } => {
+                            self.mode = AppMode::Exit;
+                            break;
+                        }
+                        key => self.saved = !self.entries.get_mut(&self.date).unwrap().input(key),
+                    },
+                    Ok(event) => {
+                        self.saved = !self.entries.get_mut(&self.date).unwrap().input(event)
                     }
+                    _ => (),
                 }
             }
         }
@@ -171,7 +192,7 @@ impl<'a> App<'a> {
     /// Returns error if:
     /// - Password is wrong
     /// - File cannot be accesed
-    pub(crate) fn try_load(&mut self) -> Result<(), DiaryError> {
+    pub(crate) fn try_load(&mut self) -> Result<(), DiaryFromFileError> {
         self.entries = HashMap::from(Diary::read_jrnl(&self.path, &self.password)?);
         self.entries
             .entry(self.date)
@@ -294,8 +315,8 @@ impl<'a> App<'a> {
                             self.date = Date::today();
                         }
                         self.entries
-                                .entry(self.date)
-                                .or_insert_with(|| Self::input_area(self.date, None));
+                            .entry(self.date)
+                            .or_insert_with(|| Self::input_area(self.date, None));
                         break;
                     }
                 }
@@ -366,18 +387,18 @@ impl<'a> App<'a> {
                     break;
                 }
                 Err(e) => match e {
-                    DiaryError::WrongPassword => {
+                    DiaryFromFileError::WrongPassword => {
                         self.path = filename;
                         self.mode = AppMode::Password;
                         break;
                     }
-                    DiaryError::InvalidFormat => {
+                    DiaryFromFileError::InvalidFormat => {
                         ph = "Invalid File Format";
                     }
-                    DiaryError::OutOfRangeSize => {
+                    DiaryFromFileError::OutOfRangeSize => {
                         ph = "File too Large";
                     }
-                    DiaryError::NotFound => match self.new_file(&filename) {
+                    DiaryFromFileError::NotFound => match self.new_file(&filename) {
                         Ok(created) => {
                             if created {
                                 self.path = filename;
@@ -392,7 +413,7 @@ impl<'a> App<'a> {
                             ph = "File could not be created";
                         }
                     },
-                    DiaryError::NotAccessible => {
+                    DiaryFromFileError::NotAccessible => {
                         ph = "File Cannot be Accesed";
                     }
                 },
@@ -400,7 +421,7 @@ impl<'a> App<'a> {
         }
         Ok(())
     }
-    pub fn exit(self) -> io::Result<()> {
+    pub fn exit(&mut self) -> io::Result<()> {
         disable_raw_mode()?;
         stderr().execute(LeaveAlternateScreen)?;
         Ok(())
@@ -408,7 +429,9 @@ impl<'a> App<'a> {
     pub fn run(mut self) -> Result<(), Box<dyn std::error::Error>> {
         enable_raw_mode()?;
         stderr().execute(EnterAlternateScreen)?;
-        self.entries.entry(self.date).or_insert(Self::input_area(self.date, None));
+        self.entries
+            .entry(self.date)
+            .or_insert(Self::input_area(self.date, None));
         loop {
             match self.mode {
                 AppMode::Edit => self.edit_view()?,
@@ -427,6 +450,11 @@ impl<'a> App<'a> {
                 AppMode::GetFile => self.open_file_rw()?,
             }
         }
+    }
+}
+impl Drop for App<'_> {
+    fn drop(&mut self) {
+        let _ = self.exit();
     }
 }
 

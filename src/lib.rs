@@ -1,4 +1,4 @@
-use diary::{Diary, DiaryError};
+use diary::{Diary, DiaryFromFileError};
 use tui_textarea::TextArea;
 
 pub mod app;
@@ -13,5 +13,5 @@ pub fn clear(ta: &mut TextArea<'_>) {
 }
 pub fn check_format(path: &str) -> bool {
     let res = Diary::read_jrnl(path, "");
-    res.is_ok() || res.is_err_and(|e| !(e == DiaryError::WrongPassword))
+    res.is_ok() || res.is_err_and(|e| !(e == DiaryFromFileError::WrongPassword))
 }

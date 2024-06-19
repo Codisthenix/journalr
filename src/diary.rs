@@ -5,14 +5,14 @@ use std::{collections::HashMap, fmt::Display, fs::File, io};
 use tui_textarea::TextArea;
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum DiaryError {
+pub enum DiaryFromFileError {
     WrongPassword,
     InvalidFormat,
     OutOfRangeSize,
     NotFound,
     NotAccessible,
 }
-impl From<cocoon::Error> for DiaryError {
+impl From<cocoon::Error> for DiaryFromFileError {
     fn from(value: cocoon::Error) -> Self {
         match value {
             cocoon::Error::Io(e) => e.into(),
@@ -22,7 +22,7 @@ impl From<cocoon::Error> for DiaryError {
         }
     }
 }
-impl From<io::Error> for DiaryError {
+impl From<io::Error> for DiaryFromFileError {
     fn from(value: io::Error) -> Self {
         if value.kind() == io::ErrorKind::NotFound {
             Self::NotFound
@@ -31,13 +31,13 @@ impl From<io::Error> for DiaryError {
         }
     }
 }
-impl From<serde_json::Error> for DiaryError {
+impl From<serde_json::Error> for DiaryFromFileError {
     fn from(value: serde_json::Error) -> Self {
         let _ = value;
         Self::InvalidFormat
     }
 }
-impl Display for DiaryError {
+impl Display for DiaryFromFileError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let message = match self {
             Self::InvalidFormat => "Invalid File Format",
@@ -49,7 +49,7 @@ impl Display for DiaryError {
         write!(f, "{message}")
     }
 }
-impl std::error::Error for DiaryError {}
+impl std::error::Error for DiaryFromFileError {}
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Diary {
     pub entries: HashMap<Date, String>,
@@ -65,13 +65,13 @@ impl Diary {
             entries: HashMap::new(),
         }
     }
-    pub fn read_jrnl(path: &str, password: &str) -> Result<Self, DiaryError> {
+    pub fn read_jrnl(path: &str, password: &str) -> Result<Self, DiaryFromFileError> {
         let cocoon = Cocoon::new(password.as_bytes());
         let bytes = cocoon.parse(&mut File::open(path)?)?;
         let string = String::from_utf8_lossy(bytes.as_slice()).into_owned();
         Ok(serde_json::from_str(&string)?)
     }
-    pub fn write_to(&self, path: &str, password: &str) -> Result<(), DiaryError> {
+    pub fn write_to(&self, path: &str, password: &str) -> Result<(), DiaryFromFileError> {
         let mut cocoon = Cocoon::new(password.as_bytes());
         cocoon.dump(
             serde_json::to_string(self)?.into_bytes(),
