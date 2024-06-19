@@ -5,7 +5,6 @@ pub mod app;
 pub mod args;
 pub mod date;
 pub mod diary;
-pub mod keybindings;
 pub mod ui;
 pub fn clear(ta: &mut TextArea<'_>) {
     ta.move_cursor(tui_textarea::CursorMove::Jump(0, 0));
