@@ -3,15 +3,7 @@ use cocoon::Cocoon;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, fmt::Display, fs::File, io};
 use tui_textarea::TextArea;
-#[derive(Debug, Deserialize, Serialize)]
-pub struct Diary {
-    pub entries: HashMap<Date, String>,
-}
-impl Default for Diary {
-    fn default() -> Self {
-        Self::new()
-    }
-}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum DiaryError {
     WrongPassword,
@@ -58,6 +50,15 @@ impl Display for DiaryError {
     }
 }
 impl std::error::Error for DiaryError {}
+#[derive(Debug, Deserialize, Serialize)]
+pub struct Diary {
+    pub entries: HashMap<Date, String>,
+}
+impl Default for Diary {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 impl Diary {
     pub fn new() -> Self {
         Self {

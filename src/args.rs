@@ -11,14 +11,16 @@ pub struct Arguments {
     file: Option<String>,
     #[arg(short, long, requires("file"))]
     password: Option<String>,
-    #[arg(short,long)]
+    #[arg(short,long,value_name("DATE: DD-MM-YYYY"))]
     date: Option<Date>
 }
 impl TryFrom<Arguments> for App<'_> {
     type Error = DiaryError;
     fn try_from(value: Arguments) -> Result<Self, Self::Error> {
         let mut app = App::new()?;
-        value.date.map(|d| app.date = d);
+        if let Some(d) = value.date {
+            app.date = d
+        }
         match value {
             Arguments {
                 file: Some(file),

@@ -86,11 +86,10 @@ impl<'a> App<'a> {
         })
     }
     pub fn save(&mut self) {
-        Diary::from(&self.entries)
-            .write_to(&self.path, &self.password)
-            .unwrap_or_else(|e| println!("Error: {e}"));
-        println!("Diary saved");
-        self.saved = true;
+        if let Ok(_) = Diary::from(&self.entries)
+                .write_to(&self.path, &self.password){
+                self.saved = true;
+            }
     }
 
     fn create_file(&mut self, path: &str) -> io::Result<bool> {
@@ -289,7 +288,14 @@ impl<'a> App<'a> {
                         break;
                     } else if KeyEvent::new(KeyCode::Char('y'), KeyModifiers::NONE) == k {
                         self.entries.remove(&self.date);
-                        self.mode = AppMode::SetDate;
+                        if let Some(date) = self.set_date_ui()? {
+                            self.date = date;
+                        } else {
+                            self.date = Date::today();
+                        }
+                        self.entries
+                                .entry(self.date)
+                                .or_insert_with(|| Self::input_area(self.date, None));
                         break;
                     }
                 }
